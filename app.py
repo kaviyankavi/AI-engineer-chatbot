@@ -15,9 +15,6 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 
-# =========================
-# LOAD ENV VARIABLES
-# =========================
 
 load_dotenv()
 
@@ -27,18 +24,13 @@ if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY not found in .env")
 
 
-# =========================
-# OPENAI CLIENT
-# =========================
+
 
 openai_client = OpenAI(
     api_key=OPENAI_API_KEY
 )
 
 
-# =========================
-# FASTAPI SETUP
-# =========================
 
 app = FastAPI()
 
@@ -51,17 +43,14 @@ app.add_middleware(
 )
 
 
-# =========================
-# REQUEST MODEL
-# =========================
+
+
 
 class ChatRequest(BaseModel):
     question: str
 
 
-# =========================
-# CHROMA DB SETUP
-# =========================
+
 
 client = chromadb.PersistentClient(
     path="./chroma_db"
@@ -72,28 +61,19 @@ collection = client.get_or_create_collection(
 )
 
 
-# =========================
-# EMBEDDING MODEL
-# =========================
+
 
 embedding_model = SentenceTransformer(
     "all-MiniLM-L6-v2"
 )
 
 
-# =========================
-# TEXT SPLITTER
-# =========================
 
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=50
 )
 
-
-# =========================
-# INGEST DOCUMENTS
-# =========================
 
 DATA_FOLDER = "data"
 
@@ -162,16 +142,10 @@ def ingest_documents():
     print("Ingestion complete.")
 
 
-# =========================
-# RUN INGESTION ON STARTUP
-# =========================
 
 ingest_documents()
 
 
-# =========================
-# SYSTEM PROMPT
-# =========================
 
 SYSTEM_PROMPT = """
 You are an internal SWS AI policy assistant.
@@ -187,26 +161,18 @@ Keep answers concise and accurate.
 """
 
 
-# =========================
-# CHAT ENDPOINT
-# =========================
+
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
 
     question = req.question
 
-    # =========================
-    # EMBED QUESTION
-    # =========================
+
 
     query_embedding = embedding_model.encode(
         question
     ).tolist()
-
-    # =========================
-    # RETRIEVE DOCUMENTS
-    # =========================
 
     results = collection.query(
         query_embeddings=[query_embedding],
@@ -219,9 +185,6 @@ def chat(req: ChatRequest):
 
     context = "\n\n".join(retrieved_docs)
 
-    # =========================
-    # CREATE PROMPT
-    # =========================
 
     user_prompt = f"""
 Context:
@@ -231,9 +194,6 @@ Question:
 {question}
 """
 
-    # =========================
-    # OPENAI RESPONSE
-    # =========================
 
     response = openai_client.chat.completions.create(
         model="gpt-4o-mini",
@@ -252,9 +212,6 @@ Question:
 
     answer = response.choices[0].message.content
 
-    # =========================
-    # EXTRACT SOURCES
-    # =========================
 
     sources = list(set([
         meta["source"]
@@ -267,10 +224,6 @@ Question:
         "sources": sources
     }
 
-
-# =========================
-# ROOT ROUTE
-# =========================
 
 @app.get("/")
 def home():
