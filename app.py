@@ -6,13 +6,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from sentence_transformers import SentenceTransformer
 
 from openai import OpenAI
 
 from dotenv import load_dotenv
+
 
 
 
@@ -25,10 +26,10 @@ if not OPENAI_API_KEY:
 
 
 
-
 openai_client = OpenAI(
     api_key=OPENAI_API_KEY
 )
+
 
 
 
@@ -44,12 +45,8 @@ app.add_middleware(
 
 
 
-
-
 class ChatRequest(BaseModel):
     question: str
-
-
 
 
 client = chromadb.PersistentClient(
@@ -59,7 +56,6 @@ client = chromadb.PersistentClient(
 collection = client.get_or_create_collection(
     name="sws_ai_docs"
 )
-
 
 
 
@@ -169,11 +165,11 @@ def chat(req: ChatRequest):
     question = req.question
 
 
-
     query_embedding = embedding_model.encode(
         question
     ).tolist()
 
+   
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=4
@@ -185,7 +181,7 @@ def chat(req: ChatRequest):
 
     context = "\n\n".join(retrieved_docs)
 
-
+    
     user_prompt = f"""
 Context:
 {context}
@@ -194,6 +190,7 @@ Question:
 {question}
 """
 
+  
 
     response = openai_client.chat.completions.create(
         model="gpt-4o-mini",
@@ -212,7 +209,7 @@ Question:
 
     answer = response.choices[0].message.content
 
-
+    
     sources = list(set([
         meta["source"]
         for meta in retrieved_metadata
@@ -223,6 +220,9 @@ Question:
         "answer": answer,
         "sources": sources
     }
+
+
+
 
 
 @app.get("/")
